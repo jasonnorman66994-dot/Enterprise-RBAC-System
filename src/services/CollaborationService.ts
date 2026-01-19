@@ -111,14 +111,15 @@ export class CollaborationService {
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`);
       
-      if (socket.data.sessionId) {
-        dataStore.deleteSession(socket.data.sessionId);
-      }
-
       if (socket.data.userId && socket.data.username) {
-        // Check if user has other active sessions
+        // Check if user has other active sessions BEFORE deleting current one
         const userSessions = dataStore.getUserSessions(socket.data.userId);
-        const isStillOnline = userSessions.length > 0;
+        const isStillOnline = userSessions.length > 1; // > 1 because current session still exists
+
+        // Now delete the session
+        if (socket.data.sessionId) {
+          dataStore.deleteSession(socket.data.sessionId);
+        }
 
         // Update user online status
         const now = new Date();
@@ -138,6 +139,9 @@ export class CollaborationService {
           },
           timestamp: new Date(),
         });
+      } else if (socket.data.sessionId) {
+        // Clean up session even if no user data
+        dataStore.deleteSession(socket.data.sessionId);
       }
     });
 

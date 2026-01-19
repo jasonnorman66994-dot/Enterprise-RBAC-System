@@ -8,9 +8,20 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/integration.test.js",
+    "test:api": "node examples/api-client.js"
   },
-  "keywords": [],
+  "keywords": [
+    "rbac",
+    "role-based-access-control",
+    "authentication",
+    "authorization",
+    "websocket",
+    "real-time",
+    "audit-trail",
+    "enterprise",
+    "security"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

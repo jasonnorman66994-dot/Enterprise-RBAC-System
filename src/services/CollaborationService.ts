@@ -1,7 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { Session, CollaborationEvent } from '../types';
+import { Session, CollaborationEvent, UserStatus } from '../types';
 import { dataStore } from '../models/DataStore';
 import { authService } from './AuthService';
 
@@ -237,7 +237,7 @@ export class CollaborationService {
     });
   }
 
-  getUserStatus(userId: string): any {
+  getUserStatus(userId: string): UserStatus | null {
     const user = dataStore.getUser(userId);
     if (!user) return null;
 
@@ -260,12 +260,12 @@ export class CollaborationService {
     };
   }
 
-  getAllUserStatuses(): any[] {
+  getAllUserStatuses(): UserStatus[] {
     const allUsers = dataStore.getAllUsers();
-    return allUsers.map(user => this.getUserStatus(user.id)).filter(status => status !== null);
+    return allUsers.map(user => this.getUserStatus(user.id)).filter((status): status is UserStatus => status !== null);
   }
 
-  getOnlineUsers(): any[] {
+  getOnlineUsers(): UserStatus[] {
     return this.getAllUserStatuses().filter(status => status.isOnline);
   }
 }

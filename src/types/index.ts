@@ -62,6 +62,7 @@ export interface UserStatus {
   username: string;
   isOnline: boolean;
   lastSeenAt: Date;
+  lastLoginAt?: Date;
   currentSessions: number;
   connectedSince?: Date;
 }

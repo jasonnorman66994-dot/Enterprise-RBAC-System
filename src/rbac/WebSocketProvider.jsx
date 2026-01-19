@@ -79,7 +79,8 @@ export function WebSocketProvider({ children, url }) {
         wsManagerRef.current.disconnect();
       }
     };
-  }, [url, queryClient, store]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, queryClient]); // 'store' is a Zustand store with stable reference, no need to include
 
   return (
     <WebSocketContext.Provider value={wsManagerRef.current}>

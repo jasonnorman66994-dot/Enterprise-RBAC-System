@@ -59,8 +59,9 @@ export function CreatePermissionForm({ onClose, onSuccess }) {
       onSuccess?.(newPermission);
       onClose();
     } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create permission';
       setErrors({
-        submit: error.response?.data?.message || error.message || 'Failed to create permission'
+        submit: errorMessage
       });
     }
   };

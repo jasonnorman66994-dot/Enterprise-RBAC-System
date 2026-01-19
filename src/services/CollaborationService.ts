@@ -34,13 +34,19 @@ export class CollaborationService {
           return;
         }
 
-        // Create session
+        // Get client info from handshake
+        const ipAddress = socket.handshake.address;
+        const userAgent = socket.handshake.headers['user-agent'];
+
+        // Create session with client info
         const session: Session = {
           id: uuidv4(),
           userId: user.id,
           socketId: socket.id,
           connectedAt: new Date(),
           lastActivity: new Date(),
+          ipAddress,
+          userAgent,
           metadata: {
             username: user.username,
             roles: user.roles,
@@ -52,6 +58,13 @@ export class CollaborationService {
         socket.data.username = user.username;
         socket.data.sessionId = session.id;
 
+        // Update user online status
+        const now = new Date();
+        dataStore.updateUser(user.id, {
+          isOnline: true,
+          lastSeenAt: now,
+        });
+
         socket.emit('authenticated', {
           sessionId: session.id,
           user: {
@@ -59,17 +72,22 @@ export class CollaborationService {
             username: user.username,
             roles: user.roles,
           },
+          connectedAt: session.connectedAt,
         });
 
-        // Notify other users
+        // Notify other users with status update
         this.broadcastEvent({
           type: 'user_joined',
           userId: user.id,
-          data: { username: user.username },
+          data: { 
+            username: user.username,
+            connectedAt: session.connectedAt,
+            isOnline: true,
+          },
           timestamp: new Date(),
         });
 
-        console.log(`User authenticated: ${user.username} (${socket.id})`);
+        console.log(`User authenticated: ${user.username} (${socket.id}) from ${ipAddress}`);
       } catch (error) {
         socket.emit('auth_error', { message: 'Authentication failed' });
       }
@@ -77,9 +95,14 @@ export class CollaborationService {
 
     // Handle activity updates
     socket.on('activity', () => {
-      if (socket.data.sessionId) {
+      if (socket.data.sessionId && socket.data.userId) {
+        const now = new Date();
         dataStore.updateSession(socket.data.sessionId, {
-          lastActivity: new Date(),
+          lastActivity: now,
+        });
+        // Update user's last seen time
+        dataStore.updateUser(socket.data.userId, {
+          lastSeenAt: now,
         });
       }
     });
@@ -93,10 +116,26 @@ export class CollaborationService {
       }
 
       if (socket.data.userId && socket.data.username) {
+        // Check if user has other active sessions
+        const userSessions = dataStore.getUserSessions(socket.data.userId);
+        const isStillOnline = userSessions.length > 0;
+
+        // Update user online status
+        const now = new Date();
+        dataStore.updateUser(socket.data.userId, {
+          isOnline: isStillOnline,
+          lastSeenAt: now,
+        });
+
+        // Notify other users
         this.broadcastEvent({
-          type: 'user_left',
+          type: isStillOnline ? 'user_status_changed' : 'user_left',
           userId: socket.data.userId,
-          data: { username: socket.data.username },
+          data: { 
+            username: socket.data.username,
+            isOnline: isStillOnline,
+            lastSeenAt: now,
+          },
           timestamp: new Date(),
         });
       }
@@ -190,6 +229,44 @@ export class CollaborationService {
       }
       dataStore.deleteSession(session.id);
     });
+
+    // Update user status
+    dataStore.updateUser(userId, {
+      isOnline: false,
+      lastSeenAt: new Date(),
+    });
+  }
+
+  getUserStatus(userId: string): any {
+    const user = dataStore.getUser(userId);
+    if (!user) return null;
+
+    const sessions = dataStore.getUserSessions(userId);
+    const isOnline = sessions.length > 0;
+    const oldestSession = sessions.length > 0 
+      ? sessions.reduce((oldest, session) => 
+          session.connectedAt < oldest.connectedAt ? session : oldest
+        )
+      : null;
+
+    return {
+      userId: user.id,
+      username: user.username,
+      isOnline,
+      lastSeenAt: user.lastSeenAt || user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
+      currentSessions: sessions.length,
+      connectedSince: oldestSession?.connectedAt,
+    };
+  }
+
+  getAllUserStatuses(): any[] {
+    const allUsers = dataStore.getAllUsers();
+    return allUsers.map(user => this.getUserStatus(user.id)).filter(status => status !== null);
+  }
+
+  getOnlineUsers(): any[] {
+    return this.getAllUserStatuses().filter(status => status.isOnline);
   }
 }
 

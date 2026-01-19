@@ -7,6 +7,9 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  lastLoginAt?: Date;
+  lastSeenAt?: Date;
+  isOnline?: boolean;
 }
 
 export interface Role {
@@ -49,7 +52,18 @@ export interface Session {
   socketId: string;
   connectedAt: Date;
   lastActivity: Date;
+  ipAddress?: string;
+  userAgent?: string;
   metadata?: any;
+}
+
+export interface UserStatus {
+  userId: string;
+  username: string;
+  isOnline: boolean;
+  lastSeenAt: Date;
+  currentSessions: number;
+  connectedSince?: Date;
 }
 
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'execute';
@@ -65,7 +79,7 @@ export interface AuthToken {
 }
 
 export interface CollaborationEvent {
-  type: 'user_joined' | 'user_left' | 'permission_updated' | 'role_updated' | 'user_updated';
+  type: 'user_joined' | 'user_left' | 'permission_updated' | 'role_updated' | 'user_updated' | 'user_status_changed';
   userId: string;
   data: any;
   timestamp: Date;

@@ -282,6 +282,74 @@ POST /api/collaboration/users/:userId/disconnect
 Authorization: Bearer <token>
 ```
 
+#### Get User Status
+```http
+GET /api/collaboration/users/:userId/status
+Authorization: Bearer <token>
+```
+
+Response:
+```json
+{
+  "status": {
+    "userId": "user-id",
+    "username": "admin",
+    "isOnline": true,
+    "lastSeenAt": "2026-01-19T09:30:00.000Z",
+    "lastLoginAt": "2026-01-19T09:25:00.000Z",
+    "currentSessions": 2,
+    "connectedSince": "2026-01-19T09:25:00.000Z"
+  }
+}
+```
+
+#### Get All User Statuses
+```http
+GET /api/collaboration/statuses
+Authorization: Bearer <token>
+```
+
+Response:
+```json
+{
+  "statuses": [
+    {
+      "userId": "user-id",
+      "username": "admin",
+      "isOnline": true,
+      "lastSeenAt": "2026-01-19T09:30:00.000Z",
+      "lastLoginAt": "2026-01-19T09:25:00.000Z",
+      "currentSessions": 2
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Get Online Users
+```http
+GET /api/collaboration/online
+Authorization: Bearer <token>
+```
+
+Response:
+```json
+{
+  "users": [
+    {
+      "userId": "user-id",
+      "username": "admin",
+      "isOnline": true,
+      "lastSeenAt": "2026-01-19T09:30:00.000Z",
+      "lastLoginAt": "2026-01-19T09:25:00.000Z",
+      "currentSessions": 2,
+      "connectedSince": "2026-01-19T09:25:00.000Z"
+    }
+  ],
+  "count": 1
+}
+```
+
 ## WebSocket Events
 
 ### Client to Server
@@ -324,8 +392,9 @@ socket.on('collaboration_event', (event) => {
 ```
 
 Event types:
-- `user_joined`: User connected to the system
-- `user_left`: User disconnected from the system
+- `user_joined`: User connected to the system (includes username, connectedAt, isOnline)
+- `user_left`: User disconnected from the system (includes username, isOnline, lastSeenAt)
+- `user_status_changed`: User status changed (when user disconnects but has other active sessions)
 - `permission_updated`: User permissions were updated
 - `role_updated`: Role was created/updated
 - `user_updated`: User information was updated

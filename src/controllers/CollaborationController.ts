@@ -40,6 +40,38 @@ export class CollaborationController {
       res.status(400).json({ error: (error as Error).message });
     }
   }
+
+  async getUserStatus(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const status = collaborationService.getUserStatus(userId as string);
+      if (!status) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+      res.json({ status });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async getAllUserStatuses(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const statuses = collaborationService.getAllUserStatuses();
+      res.json({ statuses, count: statuses.length });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async getOnlineUsers(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const users = collaborationService.getOnlineUsers();
+      res.json({ users, count: users.length });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
 }
 
 export const collaborationController = new CollaborationController();

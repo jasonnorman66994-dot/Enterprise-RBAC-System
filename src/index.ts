@@ -120,6 +120,15 @@ app.get('/api/collaboration/users/:userId/sessions', apiLimiter, authenticate, (
 app.post('/api/collaboration/users/:userId/disconnect', apiLimiter, authenticate, (req, res) => 
   collaborationController.disconnectUser(req, res)
 );
+app.get('/api/collaboration/users/:userId/status', apiLimiter, authenticate, (req, res) => 
+  collaborationController.getUserStatus(req, res)
+);
+app.get('/api/collaboration/statuses', apiLimiter, authenticate, (req, res) => 
+  collaborationController.getAllUserStatuses(req, res)
+);
+app.get('/api/collaboration/online', apiLimiter, authenticate, (req, res) => 
+  collaborationController.getOnlineUsers(req, res)
+);
 
 // Initialize demo data
 async function initializeDemoData() {

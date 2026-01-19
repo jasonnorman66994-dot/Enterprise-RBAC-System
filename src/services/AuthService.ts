@@ -56,8 +56,16 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    const token = this.generateToken(user);
-    return { user, token };
+    // Update last login time and last seen time
+    const now = new Date();
+    const updatedUser = dataStore.updateUser(user.id, {
+      lastLoginAt: now,
+      lastSeenAt: now,
+      isOnline: true,
+    });
+
+    const token = this.generateToken(updatedUser || user);
+    return { user: updatedUser || user, token };
   }
 
   generateToken(user: User): string {

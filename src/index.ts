@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import http from 'http';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 import { authController } from './controllers/AuthController';
 import { rbacController } from './controllers/RBACController';
 import { auditController } from './controllers/AuditController';
@@ -14,6 +15,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Rate limiting middleware
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs for auth routes
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware
 app.use(express.json());
@@ -37,69 +55,69 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Authentication routes
-app.post('/api/auth/register', (req, res) => authController.register(req, res));
-app.post('/api/auth/login', (req, res) => authController.login(req, res));
-app.post('/api/auth/change-password', authenticate, auditLog('change_password', 'user'), (req, res) => 
+// Authentication routes (with stricter rate limiting)
+app.post('/api/auth/register', authLimiter, (req, res) => authController.register(req, res));
+app.post('/api/auth/login', authLimiter, (req, res) => authController.login(req, res));
+app.post('/api/auth/change-password', apiLimiter, authenticate, auditLog('change_password', 'user'), (req, res) => 
   authController.changePassword(req, res)
 );
-app.get('/api/auth/me', authenticate, (req, res) => authController.me(req, res));
+app.get('/api/auth/me', apiLimiter, authenticate, (req, res) => authController.me(req, res));
 
 // Role routes
-app.post('/api/roles', authenticate, auditLog('create_role', 'role'), (req, res) => 
+app.post('/api/roles', apiLimiter, authenticate, auditLog('create_role', 'role'), (req, res) => 
   rbacController.createRole(req, res)
 );
-app.get('/api/roles', authenticate, (req, res) => rbacController.getAllRoles(req, res));
-app.get('/api/roles/:roleId', authenticate, (req, res) => rbacController.getRole(req, res));
-app.put('/api/roles/:roleId', authenticate, auditLog('update_role', 'role'), (req, res) => 
+app.get('/api/roles', apiLimiter, authenticate, (req, res) => rbacController.getAllRoles(req, res));
+app.get('/api/roles/:roleId', apiLimiter, authenticate, (req, res) => rbacController.getRole(req, res));
+app.put('/api/roles/:roleId', apiLimiter, authenticate, auditLog('update_role', 'role'), (req, res) => 
   rbacController.updateRole(req, res)
 );
-app.delete('/api/roles/:roleId', authenticate, auditLog('delete_role', 'role'), (req, res) => 
+app.delete('/api/roles/:roleId', apiLimiter, authenticate, auditLog('delete_role', 'role'), (req, res) => 
   rbacController.deleteRole(req, res)
 );
 
 // Permission routes
-app.post('/api/permissions', authenticate, auditLog('create_permission', 'permission'), (req, res) => 
+app.post('/api/permissions', apiLimiter, authenticate, auditLog('create_permission', 'permission'), (req, res) => 
   rbacController.createPermission(req, res)
 );
-app.get('/api/permissions', authenticate, (req, res) => rbacController.getAllPermissions(req, res));
-app.delete('/api/permissions/:permissionId', authenticate, auditLog('delete_permission', 'permission'), (req, res) => 
+app.get('/api/permissions', apiLimiter, authenticate, (req, res) => rbacController.getAllPermissions(req, res));
+app.delete('/api/permissions/:permissionId', apiLimiter, authenticate, auditLog('delete_permission', 'permission'), (req, res) => 
   rbacController.deletePermission(req, res)
 );
 
 // User role assignment routes
-app.post('/api/users/:userId/roles', authenticate, auditLog('assign_roles', 'user'), (req, res) => 
+app.post('/api/users/:userId/roles', apiLimiter, authenticate, auditLog('assign_roles', 'user'), (req, res) => 
   rbacController.assignRoles(req, res)
 );
-app.delete('/api/users/:userId/roles', authenticate, auditLog('remove_roles', 'user'), (req, res) => 
+app.delete('/api/users/:userId/roles', apiLimiter, authenticate, auditLog('remove_roles', 'user'), (req, res) => 
   rbacController.removeRoles(req, res)
 );
-app.get('/api/users/:userId/permissions', authenticate, (req, res) => 
+app.get('/api/users/:userId/permissions', apiLimiter, authenticate, (req, res) => 
   rbacController.getUserPermissions(req, res)
 );
-app.get('/api/users/:userId/roles', authenticate, (req, res) => 
+app.get('/api/users/:userId/roles', apiLimiter, authenticate, (req, res) => 
   rbacController.getUserRoles(req, res)
 );
 
 // Audit routes
-app.get('/api/audit/logs', authenticate, (req, res) => auditController.getLogs(req, res));
-app.get('/api/audit/users/:userId', authenticate, (req, res) => auditController.getUserActivity(req, res));
-app.get('/api/audit/resources/:resource', authenticate, (req, res) => auditController.getResourceActivity(req, res));
-app.get('/api/audit/recent', authenticate, (req, res) => auditController.getRecentActivity(req, res));
-app.get('/api/audit/stats', authenticate, (req, res) => auditController.getStats(req, res));
-app.get('/api/audit/search', authenticate, (req, res) => auditController.searchLogs(req, res));
+app.get('/api/audit/logs', apiLimiter, authenticate, (req, res) => auditController.getLogs(req, res));
+app.get('/api/audit/users/:userId', apiLimiter, authenticate, (req, res) => auditController.getUserActivity(req, res));
+app.get('/api/audit/resources/:resource', apiLimiter, authenticate, (req, res) => auditController.getResourceActivity(req, res));
+app.get('/api/audit/recent', apiLimiter, authenticate, (req, res) => auditController.getRecentActivity(req, res));
+app.get('/api/audit/stats', apiLimiter, authenticate, (req, res) => auditController.getStats(req, res));
+app.get('/api/audit/search', apiLimiter, authenticate, (req, res) => auditController.searchLogs(req, res));
 
 // Collaboration routes
-app.get('/api/collaboration/sessions', authenticate, (req, res) => 
+app.get('/api/collaboration/sessions', apiLimiter, authenticate, (req, res) => 
   collaborationController.getActiveSessions(req, res)
 );
-app.get('/api/collaboration/users', authenticate, (req, res) => 
+app.get('/api/collaboration/users', apiLimiter, authenticate, (req, res) => 
   collaborationController.getActiveUsers(req, res)
 );
-app.get('/api/collaboration/users/:userId/sessions', authenticate, (req, res) => 
+app.get('/api/collaboration/users/:userId/sessions', apiLimiter, authenticate, (req, res) => 
   collaborationController.getUserSessions(req, res)
 );
-app.post('/api/collaboration/users/:userId/disconnect', authenticate, (req, res) => 
+app.post('/api/collaboration/users/:userId/disconnect', apiLimiter, authenticate, (req, res) => 
   collaborationController.disconnectUser(req, res)
 );
 

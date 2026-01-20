@@ -1,3 +1,15 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.DS_Store
+coverage/
+.nyc_output/
+*.sqlite
+*.db
+.vscode/
+.idea/
 # Dependencies
 node_modules/
 /.pnp
